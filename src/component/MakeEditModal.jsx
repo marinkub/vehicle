@@ -1,9 +1,9 @@
-import React from "react";
 import './Modal.css';
 import { observer } from "mobx-react";
 
-const ModalEditMake = props => {
-    if (!props.show) {
+function MakeEditModal(props) {
+    if(!props.show)
+    {
         return null
     }
     const store = props.store;
@@ -27,7 +27,7 @@ const ModalEditMake = props => {
 					/>
                 </div>
                 <div className="modal-footer">
-                    <button className="modal-button" onClick={()=>{store.editMake()}}>Edit</button>
+                    <button className="modal-button" onClick={()=>{store.MakeModalAction()}}>{props.buttonTitle}</button>
                     <button className="modal-button" onClick={props.onClose}>Close</button>
                 </div>
             </div>
@@ -35,4 +35,4 @@ const ModalEditMake = props => {
     )
 }
 
-export default observer(ModalEditMake);
+export default observer(MakeEditModal);

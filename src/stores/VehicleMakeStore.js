@@ -1,126 +1,110 @@
-import {  makeObservable, observable, action } from "mobx";
+import {  makeObservable, observable, action, runInAction } from "mobx";
 import VehicleMakeService from "../services/VehicleMakeService";
+import Service from "../services/Service";
 
 class VehicleMakeStore {
     data = []
-    allData = []
-    values = {
-		name: '',
-	};
-    Newvalues = {
-		name: '',
-	};
-    id= null
     search = ''
     cursor = null
     fistVisible = null
+    order = 'asc'
+    search = ''
     constructor() {
         this.makeService = new VehicleMakeService();
+        this.Service = new Service();
         makeObservable(this, {
             data: observable,
-            values: observable,
-            Newvalues: observable,
-            id: observable,
             search: observable,
             cursor: observable,
             fistVisible: observable,
+            order: observable,
+            search: observable,
             handleSort: action,
             filtered: action,
-            nextPage: action,
-            setValues: action,
-            setValuesNew: action,
-            currentId: action,
-            setName: action
+            nextPage: action
         })
     }
 
     getMakesAsync = async() => {
-        await this.makeService.fetchData();
-        await this.makeService.fetchallData()
-    }
+        const data = await this.makeService.fetchData(this.order, this.search);
 
-    setValues(values) {
-		this.values = values;
-	}
-
-    setValuesNew(values) {
-		this.Newvalues = values;
-	}
-
-    setName =() => {
-        this.values.name = "";
-    }
-
-    onChangeInput = (e) => {
-		const { name, value } = e.target;
-		this.setValues({ ...this.values, [name]: value });
-	};
-
-    onChangeInputNew = (e) => {
-		const { name, value } = e.target;
-		this.setValuesNew({ ...this.Newvalues, [name]: value });
-	};
-
-    addNew = () => {
-        const ascMake = this.allData.slice().sort((a, b) => (a.id > b.id ? 1 : -1));
-        const lastIndex = ascMake.length - 1;
-        const id = ascMake[lastIndex].id + 1;
-        const abrv = this.Newvalues.name.toLowerCase()
-        this.makeService.addNew(id, this.Newvalues.name, abrv)
-        this.Newvalues.name = "";
-    }
-
-    editMake = async() => {
-        const abrv = this.values.name.toLowerCase();
-        await this.makeService.editMake(this.id, this.values.name, abrv);
-    }
-
-    currentId = (id) => {
-        this.id = id;
-        this.data.map(a => {
-            if(a.id === this.id)
-            {
-                console.log(a.name);
-                this.values.name = a.name;
-            }
+        runInAction(() => {
+            this.data = data;
         })
     }
 
-    onDelte = async(id) => {
-        await this.makeService.onDelete(id);
+    addNew = async(id, name) => {
+        const abrv = name.toLowerCase()
+        this.Service.addNew(id, name, abrv)
+        const data = await this.makeService.fetchData(this.order, this.search);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
-    handleSort(values) {
+    editMake = async(id, make, name) => {
+        const abrv = name.toLowerCase();
+        await this.Service.edit(id, make, name, abrv);
+        const data = await this.makeService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
+    }
+
+
+    onDelte = async(id) => {
+        await this.makeService.onDelete(id);
+        const data = await this.makeService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
+    }
+
+    async handleSort(values) {
         if (values === "asc")
         {
-            const ascMake = this.data.slice().sort((a, b) => (a.name > b.name ? 1 : -1));
-            this.data = ascMake;
+            this.order = values
+            const data = await this.makeService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
         }
         if (values === "desc")
         {
-            const decsMake = this.data.slice().sort((a, b) => (a.name < b.name ? 1 : -1));
-            this.data = decsMake;
+            this.order = values
+            const data = await this.makeService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
         }
     }
 
-    filtered(values) {
-        this.search = values;
+    filtered = async(values) => {
+        const data = await this.makeService.fetchData(this.order, values);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
     get DataList() {
-        const items = this.data.filter((item) => {
-            return item.name.toLowerCase().includes(this.search.toLowerCase())
-        });
-        if (items.length) return items;
         return this.data;
     }
 
     nextPage= async() => {
-        await this.makeService.nextPage(this.cursor);
+        const lastVisible = this.data.length - 1;
+        this.cursor = this.data[lastVisible].name;
+        const data = await this.makeService.nextPage(this.cursor, this.order);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
     previousPage = async() => {
-        await this.makeService.previousPage(this.fistVisible);
+        this.fistVisible = this.data[0].name;
+        const data = await this.makeService.previousPage(this.fistVisible, this.order);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 }
 

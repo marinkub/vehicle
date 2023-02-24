@@ -1,13 +1,11 @@
-import React from "react";
 import './Modal.css';
 import { observer } from "mobx-react";
 
-const ModalAddModel = props => {
+function ModelEditModal(props) {
     if (!props.show) {
         return null
     }
     const store = props.store;
-    store.unsetSelected();
     return (
         <div className="modal">
             <div className="modal-content">
@@ -17,13 +15,13 @@ const ModalAddModel = props => {
                 <div className="modal-body">
                 <select 
                     className="modelidAdd"
-                    value={store.newvalues.makeid}
+                    value={store.values.makeid}
                     onChange={(e) => {
-                        store.onChangeInputMakeidNew(e.target.value);
+                        store.onChangeInputMakeid(e.target.value);
                     }}
                 >
                     <option value="">Select Make</option>
-                    {store.MakeList.map(make => (
+                    {store.ModelStore.MakeList.map(make => (
                         <option key={make.id} value={make.id}>{make.name}</option>
                     ))}
                 </select>
@@ -32,15 +30,15 @@ const ModalAddModel = props => {
 						id="name"
 						type="text"
 						name="name"
-						value={store.newvalues.name}
+						value={store.values.name}
 						placeholder="Name"
-						onChange={store.onChangeInputNew}
+						onChange={store.onChangeInput}
 						className="form-control"
 						required
 					/>
                 </div>
                 <div className="modal-footer">
-                    <button className="modal-button" onClick={()=>{store.addNew()}}>Add</button>
+                    <button className="modal-button" onClick={()=>store.ModelsModalAction()}>{props.buttonTitle}</button>
                     <button className="modal-button" onClick={props.onClose}>Close</button>
                 </div>
             </div>
@@ -48,4 +46,4 @@ const ModalAddModel = props => {
     )
 }
 
-export default observer(ModalAddModel);
+export default observer(ModelEditModal);

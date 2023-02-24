@@ -1,196 +1,134 @@
-import { makeObservable, observable, action } from "mobx";
+import { makeObservable, observable, action, runInAction } from "mobx";
 import VehicleModelService from "../services/VehicleModelService";
-import VehicleMakeStore from "./VehicleMakeStore";
+import VehicleMakeService from "../services/VehicleMakeService";
+import Service from "../services/Service";
 
 class VehicleModelStore {
     data = []
-    allData = []
+    makeList = []
     cursor = null
     fistVisible = null
-    id = null
-    values = {
-		name: '',
-        makeid: ''
-	};
-    newvalues = {
-        name: '',
-        makeid: ''
-    }
     search = ''
     lastVisible = null
+    order = 'asc'
     constructor() {
         this.modelService = new VehicleModelService();
-        this.makeStore =  VehicleMakeStore;
+        this.makeService = new VehicleMakeService();
+        this.Service = new Service();
         makeObservable(this, {
             data: observable,
-            id: observable,
-            values: observable,
-            allData: observable,
             cursor: observable,
             fistVisible: observable,
             search: observable,
-            newvalues: observable,
+            makeList: observable,
+            order: observable,
             handleSort: action,
             filtered: action,
-            nextPage: action,
-            setValues: action,
-            setSelected: action,
-            unsetSelected: action,
-            setValuesNew: action,
-            
+            nextPage: action, 
         })
     }
 
     getMakesAsync = async() => {
-        await this.modelService.fetchData();
-        await this.modelService.fetchallData();
-        await this.makeStore.getMakesAsync();
-    }
+        const data = await this.modelService.fetchData(this.order, this.search);
+        const make = await this.makeService.fetchallData();
 
-    setValues(values) {
-        this.values = values;
-    }
-
-    setValuesNew(values) {
-        this.newvalues = values;
-    }
-
-    onChangeInputName = (e) => {
-        const { name, value } = e.target;
-        this.setValues({...this.values, [name]: value});
-    }
-
-    onChangeInputNew = (e) => {
-		const { name, value } = e.target;
-		this.setValuesNew({ ...this.newvalues, [name]: value });
-	};
-
-    setSelected = (id) => {
-        this.id = id;
-        this.data.map(a => {
-            if(a.id === id)
-            {
-                this.values.name = a.name;
-                this.values.makeid = a.makeid;
-            }
+        runInAction(() => {
+            this.data = data;
+            this.makeList = make;
         })
     }
 
-    unsetSelected() {
-        this.values.makeid = "";
-        this.values.name = "";
-        this.id = "";
+    addNew = async(makeid, name) => {
+        const abrv = name.toLowerCase();
+        this.Service.addNew(makeid, name, abrv);
+        const data = await this.modelService.fetchData(this.order, this.search);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
-    onChangeInputMakeid = (e) => {
-        this.values.makeid = e
-        console.log(this.values.makeid);
-    }
-
-    onChangeInputMakeidNew = (e) => {
-        this.newvalues.makeid = e
-        console.log(this.newvalues.makeid);
-    }
-
-    addNew = () => {
-        
-        const ascModel = this.allData.slice().sort((a, b) => (a.id > b.id ? 1 : -1));
-        const lastIndex = ascModel.length - 1;
-        const id = ascModel[lastIndex].id + 1;
-        const abrv = this.newvalues.name.toLowerCase();
-        const makeid = this.newvalues.makeid;
-        console.log(id, this.newvalues.name, makeid);
-        this.modelService.addNew(id, makeid, this.newvalues.name, abrv);
-        this.newvalues.name = "";
-        this.newvalues.makeid = "";
-    }
-
-    editModel = async() => {
-        const abrv = this.values.name.toLowerCase();
-        await this.modelService.editModel(this.id, this.values.makeid, this.values.name, abrv)
+    editModel = async(id, makeid, name) => {
+        const abrv = name.toLowerCase();
+        await this.Service.edit(id, makeid, name, abrv);
+        const data = await this.modelService.fetchData(this.order, this.search);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
     onDelete = async(id) => {
         await this.modelService.onDelete(id);
+        const data = await this.modelService.fetchData(this.order, this.search);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
-    handleSort= (values) => {
-        if (values === "asc")
+    handleSort= async(values) => {
+       if (values === "asc")
         {
-            const ascMake = this.data.slice().sort((a, b) => (a.name > b.name ? 1 : -1));
-            this.data = ascMake;
-            
+            this.order = values
+            const data = await this.modelService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
         }
         if (values === "desc")
         {
-            const decsMake = this.data.slice().sort((a, b) => (a.name < b.name ? 1 : -1));
-            this.data = decsMake;
-            
+            this.order = values
+            const data = await this.modelService.fetchData(this.order, this.search);
+            runInAction(() => {
+                this.data = data;
+            })
         }
     }
 
-    filtered(values) {
-        this.search = values;
+    filtered = async(values) =>{
+        const data = await this.modelService.fetchData(this.order, values)
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
     get MakeList() {
-        return this.makeStore.allData;
+        return this.makeList;
     }
 
-
     get DataList() {
-        const cars = this.data.filter((car) => {
-            return car.name.toLowerCase().includes(this.search.toLowerCase());
+        const list = [];
+        this.data.map(model => {  
+            this.makeList.map(make => {
+                if(model.makeid === make.id)
+                {
+                    list.push({
+                        name: model.name,
+                        makeid: model.makeid,
+                        makename: make.name,
+                        abrv: model.abrv,
+                        id: model.id
+                    })
+                }
+                
+            })
         })
-        if (cars.length)
-        {
-            const list = [];
-            cars.map(model => {
-                this.makeStore.allData.map(make => {
-                    if(model.makeid == make.id)
-                    {
-                        list.push({
-                            name: model.name,
-                            makeid: model.makeid,
-                            makename: make.name,
-                            abrv: model.abrv,
-                            id: model.id
-                        })
-                    }
-                    
-                })
-            })
-            return list;
-        } 
-        else
-        {
-            const list = [];
-            this.data.map(model => {
-                this.makeStore.allData.map(make => {
-                    console.log(make.name)
-                    if(model.makeid == make.id)
-                    {
-                        list.push({
-                            name: model.name,
-                            makeid: model.makeid,
-                            makename: make.name,
-                            abrv: model.abrv,
-                            id: model.id
-                        })
-                    }
-                    
-                })
-            })
-            return list
-        } 
+        return list;
     }
 
     nextPage = async() => {
-       await this.modelService.nextPage(this.cursor);
+        const lastVisible = this.data.length - 1;
+        this.cursor = this.data[lastVisible].name;
+        const data = await this.modelService.nextPage(this.cursor, this.order);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
     previousPage = async() => {
-        await this.modelService.previousPage(this.fistVisible);
+        this.fistVisible = this.data[0].name;
+        const data = await this.modelService.previousPage(this.fistVisible, this.order);
+        runInAction(() => {
+            this.data = data;
+        })
     }
 
 }

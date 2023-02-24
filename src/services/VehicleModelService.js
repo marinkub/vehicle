@@ -1,102 +1,61 @@
 import { db } from "../utilities/firebase";
-import { collection, onSnapshot, getDocs, limit, orderBy, query, startAfter, endBefore, deleteDoc, doc, where, addDoc, updateDoc } from "firebase/firestore";
-import VehicleModelStore from "../stores/VehicleModelStore";
-import { runInAction } from "mobx";
+import { collection, getDocs, limit, orderBy, query, startAfter, endBefore, deleteDoc, doc, where, addDoc, updateDoc, limitToLast } from "firebase/firestore";
+
 
 
 class VehicleModelService {
-    fetchData = async() => {
-        const q = query(collection(db, "VehicleModel"), orderBy("name", "asc"), limit(4));
-        await onSnapshot(q, (querySnapshot) => {
-            const makes = [];
-            const fistVisible = querySnapshot.docs[0];
-            const lastVisible = querySnapshot.docs[querySnapshot.docs.length -1];
-            querySnapshot.forEach((doc) => {
-                makes.push(doc.data());
-            });
-            runInAction(() => {
-                VehicleModelStore.data = makes;
-                VehicleModelStore.fistVisible = fistVisible;
-                VehicleModelStore.cursor = lastVisible;
-            })
-        });
+    fetchData = async(order, data) => {
+        const model = [];
+        var q = null;
+        if(data !== "")
+        {
+           q = query(collection(db, "VehicleModel"), where('name', '==', data), limit(3));
+        }
+        else
+        {
+            q = query(collection(db, "VehicleModel"), orderBy("name", order), limit(3));
+        }
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            model.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv, makeid: doc.data().makeid});
+        })
+        return model;
     }
 
-    fetchallData = async() => {
-        const q = query(collection(db, "VehicleModel"), orderBy("name", "asc"));
-        await onSnapshot(q, (querySnapshot) => {
-            const makes = [];
-            querySnapshot.forEach((doc) => {
-                makes.push(doc.data());
-            });
-            runInAction(() => {
-                VehicleModelStore.allData = makes;
-            })
-        });
+    nextPage = async(data, order) => {
+        const model = [];
+        const q = query(collection(db, "VehicleModel"), orderBy("name", order), startAfter(data), limit(3));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            model.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv, makeid: doc.data().makeid});
+        })
+        if(model.length === 0)
+        {
+            return this.fetchData(order);
+        }
+        return model;
     }
 
-    nextPage = async(data) => {
-        const q = query(collection(db, "VehicleModel"), orderBy("name", "asc"), startAfter(data) ,limit(4));
-        await onSnapshot(q, (querySnapshot) => {
-            const makes = [];
-            const fistVisible = querySnapshot.docs[0];
-            const lastVisible = querySnapshot.docs[querySnapshot.docs.length -1];
-            querySnapshot.forEach((doc) => {
-                makes.push(doc.data());
-            });
-            runInAction(() => {
-                VehicleModelStore.data = makes;
-                VehicleModelStore.fistVisible = fistVisible;
-                VehicleModelStore.cursor = lastVisible;
-            })
-          });
+    previousPage = async(data, order) => {
+        const model = [];
+        const q = query(collection(db, "VehicleModel"), orderBy("name", order), endBefore(data), limitToLast(3));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            model.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv, makeid: doc.data().makeid});
+        })
+        if(model.length === 0)
+        {
+            return this.fetchData(order);
+        }
+        else
+        {
+            return model;
+        }
     }
 
-    previousPage = async(data) => {
-        const q = query(collection(db, "VehicleModel"), orderBy("name", "asc"), endBefore(data) ,limit(4));
-        await onSnapshot(q, (querySnapshot) => {
-            const makes = [];
-            const fistVisible = querySnapshot.docs[0];
-            const lastVisible = querySnapshot.docs[querySnapshot.docs.length -1];
-            querySnapshot.forEach((doc) => {
-                makes.push(doc.data());
-            });
-            runInAction(() => {
-                VehicleModelStore.data = makes;
-                VehicleModelStore.fistVisible = fistVisible;
-                VehicleModelStore.cursor = lastVisible;
-            })
-          });
-    }
-
-    addNew = async(id, makeid, name, abrv) => {
-        await addDoc(collection(db, "VehicleModel"), {
-            id: id,
-            makeid: makeid,
-            name: name,
-            abrv: abrv
-        });
-        alert("Vehicle model added");
-    }
-
-    editModel = async(id, makeid, name, abrv) => {
-        const q = query(collection(db, "VehicleModel"), where("id", "==", id));
-        const DataSnapshot = await getDocs(q);
-        DataSnapshot.docs.map(docs => {console.log(docs.id, '=>', docs.data());
-            updateDoc(doc(db, "VehicleModel", docs.id), {
-                makeid: makeid,
-                name: name,
-                abrv: abrv
-            });
-        });
-    }
 
     onDelete = async(id) => {
-        const q = query(collection(db, "VehicleModel"), where("id", "==", id));
-        const DataSnapshot = await getDocs(q);
-        DataSnapshot.docs.map(docs => {console.log(docs.id, '=>', docs.data());
-        deleteDoc(doc(db, "VehicleModel", docs.id))
-        })
+        await deleteDoc(doc(db, "VehicleModel", id))
     }
 }
 

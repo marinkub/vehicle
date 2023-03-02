@@ -1,24 +1,14 @@
 import { db } from "../utilities/firebase";
-import { collection, getDocs, limit, orderBy, query, startAfter, deleteDoc, doc, where, addDoc, updateDoc, endBefore, limitToLast } from "firebase/firestore";
-
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import Service from "./Service";
 
 class VehicleMakeService {
+    constructor() {
+        this.Service = new Service();
+    }
     
     fetchData = async(order, data) => {
-        const make = [];
-        var q = null;
-        if(data !== "")
-        {
-            q = query(collection(db, "VehicleMake"), where("name", '==', data), limit(2));
-        }
-        else
-        {
-            q = query(collection(db, "VehicleMake"), orderBy("name", order), limit(2));
-        }
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            make.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv});
-        })
+        const make = await this.Service.fetch("VehicleMake", order, data);
         return make;
     }
 
@@ -33,12 +23,7 @@ class VehicleMakeService {
     }
 
     nextPage = async(data, order) => {
-        const make = [];
-        const q = query(collection(db, "VehicleMake"), orderBy("name", order), startAfter(data) ,limit(2));
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            make.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv});
-        })
+        const make = await this.Service.next("VehicleMake", data, order);
         if(make.length === 0)
         {
             return this.fetchData(order)
@@ -50,12 +35,7 @@ class VehicleMakeService {
     }
 
     previousPage = async(data, order) => {
-        const make = [];
-        const q = query(collection(db, "VehicleMake"), orderBy("name", order), endBefore(data) ,limitToLast(2));
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            make.push({id: doc.id, name: doc.data().name, abrv: doc.data().abrv});
-        })
+        const make = await this.Service.previous("VehicleMake", data, order);
         if(make.length === 0)
         {
             return this.fetchData(order)
@@ -67,10 +47,16 @@ class VehicleMakeService {
     }
 
     onDelete = async(id) => {
-        await deleteDoc(doc(db, "VehicleMake", id));
+       await this.Service.delete("VehicleMake", id);
     }
 
-    
+    addNew = async(id, name, abrv) => {
+        await this.Service.addNew(id, name, abrv);
+    }
+
+    edit = async(id, make, name, abrv) => {
+        await this.Service.edit(id, make, name, abrv);
+    }
 }
 
 export default VehicleMakeService;

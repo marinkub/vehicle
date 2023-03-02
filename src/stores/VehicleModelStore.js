@@ -1,7 +1,6 @@
-import { makeObservable, observable, action, runInAction } from "mobx";
+import { makeObservable, observable, action, runInAction, computed } from "mobx";
 import VehicleModelService from "../services/VehicleModelService";
 import VehicleMakeService from "../services/VehicleMakeService";
-import Service from "../services/Service";
 
 class VehicleModelStore {
     data = []
@@ -14,7 +13,6 @@ class VehicleModelStore {
     constructor() {
         this.modelService = new VehicleModelService();
         this.makeService = new VehicleMakeService();
-        this.Service = new Service();
         makeObservable(this, {
             data: observable,
             cursor: observable,
@@ -24,7 +22,8 @@ class VehicleModelStore {
             order: observable,
             handleSort: action,
             filtered: action,
-            nextPage: action, 
+            nextPage: action,
+            DataList: computed
         })
     }
 
@@ -40,7 +39,7 @@ class VehicleModelStore {
 
     addNew = async(makeid, name) => {
         const abrv = name.toLowerCase();
-        this.Service.addNew(makeid, name, abrv);
+        this.modelService.addNew(makeid, name, abrv);
         const data = await this.modelService.fetchData(this.order, this.search);
         runInAction(() => {
             this.data = data;
@@ -49,7 +48,7 @@ class VehicleModelStore {
 
     editModel = async(id, makeid, name) => {
         const abrv = name.toLowerCase();
-        await this.Service.edit(id, makeid, name, abrv);
+        await this.modelService.edit(id, makeid, name, abrv);
         const data = await this.modelService.fetchData(this.order, this.search);
         runInAction(() => {
             this.data = data;
@@ -96,22 +95,26 @@ class VehicleModelStore {
 
     get DataList() {
         const list = [];
-        this.data.map(model => {  
-            this.makeList.map(make => {
-                if(model.makeid === make.id)
-                {
-                    list.push({
-                        name: model.name,
-                        makeid: model.makeid,
-                        makename: make.name,
-                        abrv: model.abrv,
-                        id: model.id
-                    })
-                }
-                
+        if(this.data.length > 0)
+        {
+            this.data.map(model => {  
+                this.makeList.map(make => {
+                    if(model.makeid === make.id)
+                    {
+                        list.push({
+                            name: model.name,
+                            makeid: model.makeid,
+                            makename: make.name,
+                            abrv: model.abrv,
+                            id: model.id
+                        })
+                    }
+                    
+                })
             })
-        })
-        return list;
+            return list;
+        }
+        
     }
 
     nextPage = async() => {

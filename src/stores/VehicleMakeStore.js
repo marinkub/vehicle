@@ -1,6 +1,5 @@
-import {  makeObservable, observable, action, runInAction } from "mobx";
+import {  makeObservable, observable, action, runInAction, computed } from "mobx";
 import VehicleMakeService from "../services/VehicleMakeService";
-import Service from "../services/Service";
 
 class VehicleMakeStore {
     data = []
@@ -11,7 +10,6 @@ class VehicleMakeStore {
     search = ''
     constructor() {
         this.makeService = new VehicleMakeService();
-        this.Service = new Service();
         makeObservable(this, {
             data: observable,
             search: observable,
@@ -21,7 +19,8 @@ class VehicleMakeStore {
             search: observable,
             handleSort: action,
             filtered: action,
-            nextPage: action
+            nextPage: action,
+            DataList: computed
         })
     }
 
@@ -35,7 +34,7 @@ class VehicleMakeStore {
 
     addNew = async(id, name) => {
         const abrv = name.toLowerCase()
-        this.Service.addNew(id, name, abrv)
+        this.makeService.addNew(id, name, abrv)
         const data = await this.makeService.fetchData(this.order, this.search);
         runInAction(() => {
             this.data = data;
@@ -44,7 +43,7 @@ class VehicleMakeStore {
 
     editMake = async(id, make, name) => {
         const abrv = name.toLowerCase();
-        await this.Service.edit(id, make, name, abrv);
+        await this.makeService.edit(id, make, name, abrv);
         const data = await this.makeService.fetchData(this.order, this.search);
             runInAction(() => {
                 this.data = data;
@@ -87,7 +86,15 @@ class VehicleMakeStore {
     }
 
     get DataList() {
-        return this.data;
+        if(this.data.length > 0)
+        {
+            return this.data;
+        }
+        else
+        {
+            return null
+        }
+        
     }
 
     nextPage= async() => {
